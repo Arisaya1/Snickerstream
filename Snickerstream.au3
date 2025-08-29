@@ -83,6 +83,13 @@ Func _ErrFunc()
 	LogLine("COM Error, ScriptLine(" & $oError.ScriptLine & ") : Number 0x" & Hex($oError.Number, 8) & " - " & $oError.WinDescription & @CRLF, 1)
 EndFunc   ;==>_ErrFunc
 
+; Check for first run and show wizard if needed
+If Not FileExists($sFname) Then
+	ShowFirstRunWizard()
+Else
+	ReadEnhancedConfig() ; Load enhanced settings if available
+EndIf
+
 CreateMainGUIandSettings() ;Create the GUI
 ButtonStateSet($GUI_DISABLE)
 LogStart()
@@ -115,6 +122,13 @@ If $__g_hD2D1DLL == -1 Then
 EndIf
 ButtonStateSet($GUI_ENABLE)
 If $bUseNTR == False Then SettingsStateSet($GUI_DISABLE)
+
+; Auto-connect if enabled
+If $bAutoConnect Then
+	Sleep(2000) ; Give the GUI time to fully load
+	LogLine("Auto-connecting...", 1)
+	StartStream()
+EndIf
 
 Do
 	Sleep(100)
@@ -675,6 +689,507 @@ Func CheckPCIP()
 	EndIf
 EndFunc
 
+; ===============================================================================
+; First-Run Wizard and Enhanced Settings
+; ===============================================================================
+
+; Global variables for enhanced settings
+Global $aRecentIPs[5] = ["192.168.1.100", "", "", "", ""], $bAutoConnect = False
+Global $sConfigJSONFile = StringLeft($sFname, StringInStr($sFname, ".", 0, -1)) & "json"
+
+; Quality presets (Priority, Factor, Quality, QoS)
+Global $aQualityPresets[3][4] = [["Low (Safe)", 1, 8, 50, 30], ["Medium (Balanced)", 1, 5, 70, 20], ["High (Best)", 1, 2, 90, 10]]
+
+Func ShowFirstRunWizard()
+	; First-run setup wizard
+	Local $hWizard = GUICreate("Snickerstream Setup Wizard", 500, 400, -1, -1, $WS_CAPTION)
+	Local $iCurrentStep = 1
+	Local $iTotalSteps = 5
+	
+	; Step 1: Welcome
+	Local $hStepLabel = GUICtrlCreateLabel("Step " & $iCurrentStep & " of " & $iTotalSteps & ": Welcome to Snickerstream!", 20, 20, 460, 20, $SS_CENTERIMAGE)
+	GUICtrlSetFont($hStepLabel, 12, 600)
+	
+	Local $hWelcomeText = GUICtrlCreateLabel("This wizard will help you set up Snickerstream for streaming your Nintendo 3DS." & @CRLF & @CRLF & _
+		"You'll need:" & @CRLF & _
+		"• A Nintendo 3DS with NTR CFW or HzMod installed" & @CRLF & _
+		"• Both devices connected to the same WiFi network" & @CRLF & _
+		"• Your 3DS IP address", 20, 60, 460, 120)
+	
+	; Method selection (Step 2)
+	Local $hMethodLabel = GUICtrlCreateLabel("Choose your streaming method:", 20, 200, 460, 20)
+	Local $hNTRRadio = GUICtrlCreateRadio("NTR CFW (Recommended for most users)", 40, 230, 300, 20)
+	Local $hHzModRadio = GUICtrlCreateRadio("HzMod (Newer, experimental)", 40, 260, 300, 20)
+	GUICtrlSetState($hNTRRadio, $GUI_CHECKED)
+	
+	; IP Address (Step 3) 
+	Local $hIPLabel = GUICtrlCreateLabel("Enter your 3DS IP address:", 20, 300, 200, 20)
+	Local $hIPInput = _GUICtrlIpAddress_Create($hWizard, 230, 298, 120, 20)
+	_GUICtrlIpAddress_Set($hIPInput, "192.168.1.100")
+	
+	; Buttons
+	Local $hBackBtn = GUICtrlCreateButton("< Back", 280, 360, 70, 25)
+	Local $hNextBtn = GUICtrlCreateButton("Next >", 360, 360, 70, 25)
+	Local $hFinishBtn = GUICtrlCreateButton("Finish", 440, 360, 50, 25)
+	
+	; Initially hide non-step-1 controls
+	Local $aStep2Controls = [$hMethodLabel, $hNTRRadio, $hHzModRadio]
+	Local $aStep3Controls = [$hIPLabel, $hIPInput]
+	
+	For $i = 0 To UBound($aStep2Controls) - 1
+		GUICtrlSetState($aStep2Controls[$i], $GUI_HIDE)
+	Next
+	For $i = 0 To UBound($aStep3Controls) - 1
+		GUICtrlSetState($aStep3Controls[$i], $GUI_HIDE)
+	Next
+	
+	GUICtrlSetState($hBackBtn, $GUI_DISABLE)
+	GUICtrlSetState($hFinishBtn, $GUI_HIDE)
+	
+	GUISetState(@SW_SHOW, $hWizard)
+	
+	; Wizard event loop
+	While 1
+		Switch GUIGetMsg()
+			Case $GUI_EVENT_CLOSE
+				ExitLoop
+			Case $hNextBtn
+				$iCurrentStep += 1
+				UpdateWizardStep($hWizard, $iCurrentStep, $iTotalSteps, $hStepLabel, $aStep2Controls, $aStep3Controls, $hBackBtn, $hNextBtn, $hFinishBtn, $hWelcomeText)
+			Case $hBackBtn
+				$iCurrentStep -= 1
+				UpdateWizardStep($hWizard, $iCurrentStep, $iTotalSteps, $hStepLabel, $aStep2Controls, $aStep3Controls, $hBackBtn, $hNextBtn, $hFinishBtn, $hWelcomeText)
+			Case $hFinishBtn
+				; Save settings and exit wizard
+				$bUseNTR = (GUICtrlRead($hNTRRadio) = $GUI_CHECKED)
+				$sIpAddr = _GUICtrlIpAddress_Get($hIPInput)
+				
+				; Set quality preset to Medium by default
+				ApplyQualityPreset(1)
+				
+				; Add IP to recent list
+				AddRecentIP($sIpAddr)
+				
+				; Save configuration
+				WriteConfig()
+				WriteEnhancedConfig()
+				
+				MsgBox($MB_ICONINFORMATION, "Setup Complete", "Snickerstream has been configured successfully!" & @CRLF & @CRLF & _
+					"You can now start streaming your 3DS. Remember to start NTR CFW or HzMod on your 3DS first.")
+				ExitLoop
+		EndSwitch
+	WEnd
+	
+	GUIDelete($hWizard)
+EndFunc
+
+Func UpdateWizardStep($hWizard, $iStep, $iTotalSteps, $hStepLabel, $aStep2Controls, $aStep3Controls, $hBackBtn, $hNextBtn, $hFinishBtn, $hWelcomeText)
+	; Update step label
+	GUICtrlSetData($hStepLabel, "Step " & $iStep & " of " & $iTotalSteps & ": " & GetStepTitle($iStep))
+	
+	; Hide all step-specific controls
+	GUICtrlSetState($hWelcomeText, $GUI_HIDE)
+	For $i = 0 To UBound($aStep2Controls) - 1
+		GUICtrlSetState($aStep2Controls[$i], $GUI_HIDE)
+	Next
+	For $i = 0 To UBound($aStep3Controls) - 1
+		GUICtrlSetState($aStep3Controls[$i], $GUI_HIDE)
+	Next
+	
+	; Show controls for current step
+	Switch $iStep
+		Case 1
+			GUICtrlSetState($hWelcomeText, $GUI_SHOW)
+		Case 2
+			For $i = 0 To UBound($aStep2Controls) - 1
+				GUICtrlSetState($aStep2Controls[$i], $GUI_SHOW)
+			Next
+		Case 3
+			For $i = 0 To UBound($aStep3Controls) - 1
+				GUICtrlSetState($aStep3Controls[$i], $GUI_SHOW)
+			Next
+	EndSwitch
+	
+	; Update button states
+	GUICtrlSetState($hBackBtn, ($iStep = 1) ? $GUI_DISABLE : $GUI_ENABLE)
+	GUICtrlSetState($hNextBtn, ($iStep = $iTotalSteps) ? $GUI_HIDE : $GUI_SHOW)
+	GUICtrlSetState($hFinishBtn, ($iStep = $iTotalSteps) ? $GUI_SHOW : $GUI_HIDE)
+EndFunc
+
+Func GetStepTitle($iStep)
+	Switch $iStep
+		Case 1
+			Return "Welcome to Snickerstream!"
+		Case 2
+			Return "Choose streaming method"
+		Case 3
+			Return "Configure connection"
+		Case Else
+			Return "Setup"
+	EndSwitch
+EndFunc
+
+Func ApplyQualityPreset($iPreset)
+	; Apply one of the predefined quality presets
+	If $iPreset >= 0 And $iPreset < UBound($aQualityPresets) Then
+		$iPriorityMode = $aQualityPresets[$iPreset][1]
+		$iPriorityFactor = $aQualityPresets[$iPreset][2]
+		$iImageQuality = $aQualityPresets[$iPreset][3]
+		$iQoS = $aQualityPresets[$iPreset][4]
+	EndIf
+EndFunc
+
+Func AddRecentIP($sIP)
+	; Add IP to recent list, moving existing entries down
+	If $sIP <> "" And $sIP <> "0.0.0.0" Then
+		; Remove if already exists
+		For $i = 0 To UBound($aRecentIPs) - 1
+			If $aRecentIPs[$i] = $sIP Then
+				For $j = $i To UBound($aRecentIPs) - 2
+					$aRecentIPs[$j] = $aRecentIPs[$j + 1]
+				Next
+				$aRecentIPs[UBound($aRecentIPs) - 1] = ""
+				ExitLoop
+			EndIf
+		Next
+		
+		; Shift existing entries down
+		For $i = UBound($aRecentIPs) - 1 To 1 Step -1
+			$aRecentIPs[$i] = $aRecentIPs[$i - 1]
+		Next
+		
+		; Add new IP at top
+		$aRecentIPs[0] = $sIP
+	EndIf
+EndFunc
+
+Func WriteEnhancedConfig()
+	; Write enhanced configuration in JSON format
+	Local $sJSON = '{'
+	$sJSON &= '"version": "1.10",'
+	$sJSON &= '"recentIPs": ['
+	For $i = 0 To UBound($aRecentIPs) - 1
+		If $aRecentIPs[$i] <> "" Then
+			$sJSON &= '"' & $aRecentIPs[$i] & '"'
+			If $i < UBound($aRecentIPs) - 1 And $aRecentIPs[$i + 1] <> "" Then $sJSON &= ','
+		EndIf
+	Next
+	$sJSON &= '],'
+	$sJSON &= '"autoConnect": ' & ($bAutoConnect ? 'true' : 'false') & ','
+	$sJSON &= '"lastUsedPreset": 1'
+	$sJSON &= '}'
+	
+	Local $hFile = FileOpen($sConfigJSONFile, 2)
+	If $hFile <> -1 Then
+		FileWrite($hFile, $sJSON)
+		FileClose($hFile)
+	EndIf
+EndFunc
+
+Func ReadEnhancedConfig()
+	; Read enhanced configuration from JSON file
+	If FileExists($sConfigJSONFile) Then
+		Local $sJSON = FileRead($sConfigJSONFile)
+		; Simple JSON parsing for our basic needs
+		If StringInStr($sJSON, '"autoConnect": true') Then $bAutoConnect = True
+		
+		; Parse recent IPs (simple approach)
+		Local $iStart = StringInStr($sJSON, '"recentIPs": [')
+		If $iStart > 0 Then
+			Local $iEnd = StringInStr($sJSON, ']', 0, 1, $iStart)
+			If $iEnd > 0 Then
+				Local $sIPSection = StringMid($sJSON, $iStart + 14, $iEnd - $iStart - 14)
+				Local $aIPMatches = StringRegExp($sIPSection, '"([^"]+)"', 3)
+				If IsArray($aIPMatches) Then
+					For $i = 0 To UBound($aIPMatches) - 1
+						If $i < UBound($aRecentIPs) Then $aRecentIPs[$i] = $aIPMatches[$i]
+					Next
+				EndIf
+			EndIf
+		EndIf
+	EndIf
+EndFunc
+
+Func ShowSettingsDialog()
+	; Enhanced Settings dialog with Basic and Advanced tabs
+	Local $hSettings = GUICreate("Snickerstream Settings", 500, 400, -1, -1, $WS_CAPTION)
+	
+	; Tab control
+	Local $hTab = GUICtrlCreateTab(10, 10, 480, 340)
+	
+	; Basic Tab
+	Local $hBasicTab = GUICtrlCreateTabItem("Basic")
+	
+	; Method selection
+	Local $hMethodGroup = GUICtrlCreateGroup("Streaming Method", 20, 40, 200, 80)
+	Local $hNTRRadio = GUICtrlCreateRadio("NTR CFW", 30, 60, 80, 20)
+	Local $hHzModRadio = GUICtrlCreateRadio("HzMod", 30, 85, 80, 20)
+	GUICtrlSetState($bUseNTR ? $hNTRRadio : $hHzModRadio, $GUI_CHECKED)
+	GUICtrlCreateGroup("", -99, -99, 1, 1)
+	
+	; Connection settings
+	Local $hConnGroup = GUICtrlCreateGroup("Connection", 240, 40, 230, 80)
+	Local $hIPLabel = GUICtrlCreateLabel("3DS IP Address:", 250, 60, 100, 20)
+	Local $hIPCombo = GUICtrlCreateCombo("", 250, 80, 120, 20)
+	Local $sIPList = ""
+	For $i = 0 To UBound($aRecentIPs) - 1
+		If $aRecentIPs[$i] <> "" Then
+			$sIPList &= $aRecentIPs[$i] & "|"
+		EndIf
+	Next
+	If $sIPList <> "" Then
+		$sIPList = StringTrimRight($sIPList, 1)
+		GUICtrlSetData($hIPCombo, $sIPList, $sIpAddr)
+	Else
+		GUICtrlSetData($hIPCombo, $sIpAddr)
+	EndIf
+	Local $hTestBtn = GUICtrlCreateButton("Test", 380, 80, 50, 20)
+	GUICtrlCreateGroup("", -99, -99, 1, 1)
+	
+	; Quality presets
+	Local $hQualityGroup = GUICtrlCreateGroup("Quality Preset", 20, 130, 450, 80)
+	Local $hLowRadio = GUICtrlCreateRadio("Low (Safe) - Good for slow networks", 30, 150, 200, 20)
+	Local $hMediumRadio = GUICtrlCreateRadio("Medium (Balanced) - Recommended", 30, 170, 200, 20)
+	Local $hHighRadio = GUICtrlCreateRadio("High (Best) - Requires good network", 30, 190, 200, 20)
+	
+	; Determine current preset based on settings
+	Local $iCurrentPreset = GetCurrentQualityPreset()
+	Switch $iCurrentPreset
+		Case 0
+			GUICtrlSetState($hLowRadio, $GUI_CHECKED)
+		Case 1
+			GUICtrlSetState($hMediumRadio, $GUI_CHECKED)
+		Case 2
+			GUICtrlSetState($hHighRadio, $GUI_CHECKED)
+		Case Else
+			GUICtrlSetState($hMediumRadio, $GUI_CHECKED)
+	EndSwitch
+	GUICtrlCreateGroup("", -99, -99, 1, 1)
+	
+	; Other options
+	Local $hAutoConnectChk = GUICtrlCreateCheckbox("Auto-connect on startup", 20, 220, 200, 20)
+	GUICtrlSetState($hAutoConnectChk, $bAutoConnect ? $GUI_CHECKED : $GUI_UNCHECKED)
+	
+	; Advanced Tab
+	Local $hAdvancedTab = GUICtrlCreateTabItem("Advanced")
+	
+	; Advanced settings (existing parameters)
+	Local $hAdvGroup = GUICtrlCreateGroup("Advanced Parameters", 20, 40, 450, 200)
+	
+	Local $hPriorityLabel = GUICtrlCreateLabel("Priority Factor:", 30, 65, 100, 20)
+	Local $hPriorityInput = GUICtrlCreateInput(String($iPriorityFactor), 140, 63, 60, 20, $ES_NUMBER)
+	
+	Local $hQualityLabel = GUICtrlCreateLabel("Image Quality:", 30, 95, 100, 20)
+	Local $hQualityInput = GUICtrlCreateInput(String($iImageQuality), 140, 93, 60, 20, $ES_NUMBER)
+	
+	Local $hQoSLabel = GUICtrlCreateLabel("QoS Value:", 30, 125, 100, 20)
+	Local $hQoSInput = GUICtrlCreateInput(String($iQoS), 140, 123, 60, 20, $ES_NUMBER)
+	
+	Local $hInterpolationLabel = GUICtrlCreateLabel("Interpolation:", 250, 65, 100, 20)
+	Local $hInterpolationCombo = GUICtrlCreateCombo("", 360, 63, 100, 20, $CBS_DROPDOWNLIST)
+	GUICtrlSetData($hInterpolationCombo, _ArrayToString($sD2D1InterpModeNames), $sD2D1InterpModeNames[$iInterpolation])
+	
+	Local $hLayoutLabel = GUICtrlCreateLabel("Screen Layout:", 250, 95, 100, 20)
+	Local $hLayoutCombo = GUICtrlCreateCombo("", 360, 93, 100, 20, $CBS_DROPDOWNLIST)
+	If $bUseNTR Then
+		GUICtrlSetData($hLayoutCombo, "Vertical|Vertical(inverted)|Horizontal|Horizontal(inverted)|Top screen only|Bottom screen only|Fullscreen(Top,st.)|Fullscreen(Bot,st.)|Fullscreen(Top)|Fullscreen(Bot)|Separate windows")
+		_GUICtrlComboBox_SetCurSel(GUICtrlGetHandle($hLayoutCombo), $iLayoutmode)
+	Else
+		GUICtrlSetData($hLayoutCombo, "Top screen only|Fullscreen(Top,st.)|Fullscreen(Top)", "Top screen only")
+	EndIf
+	
+	GUICtrlCreateGroup("", -99, -99, 1, 1)
+	
+	GUICtrlCreateTabItem("")
+	
+	; Buttons
+	Local $hOKBtn = GUICtrlCreateButton("OK", 320, 360, 60, 25)
+	Local $hCancelBtn = GUICtrlCreateButton("Cancel", 390, 360, 60, 25)
+	Local $hResetBtn = GUICtrlCreateButton("Reset to Defaults", 20, 360, 100, 25)
+	Local $hExportBtn = GUICtrlCreateButton("Export", 130, 360, 60, 25)
+	Local $hImportBtn = GUICtrlCreateButton("Import", 200, 360, 60, 25)
+	
+	GUISetState(@SW_SHOW, $hSettings)
+	
+	; Event loop
+	While 1
+		Switch GUIGetMsg()
+			Case $GUI_EVENT_CLOSE, $hCancelBtn
+				ExitLoop
+			Case $hOKBtn
+				; Save settings from dialog
+				$bUseNTR = (GUICtrlRead($hNTRRadio) = $GUI_CHECKED)
+				$sIpAddr = GUICtrlRead($hIPCombo)
+				$bAutoConnect = (GUICtrlRead($hAutoConnectChk) = $GUI_CHECKED)
+				
+				; Apply quality preset if changed
+				If GUICtrlRead($hLowRadio) = $GUI_CHECKED Then
+					ApplyQualityPreset(0)
+				ElseIf GUICtrlRead($hMediumRadio) = $GUI_CHECKED Then
+					ApplyQualityPreset(1)
+				ElseIf GUICtrlRead($hHighRadio) = $GUI_CHECKED Then
+					ApplyQualityPreset(2)
+				EndIf
+				
+				; Advanced settings
+				$iPriorityFactor = Int(GUICtrlRead($hPriorityInput))
+				$iImageQuality = Int(GUICtrlRead($hQualityInput))
+				$iQoS = Int(GUICtrlRead($hQoSInput))
+				$iInterpolation = _GUICtrlComboBox_GetCurSel(GUICtrlGetHandle($hInterpolationCombo))
+				If $bUseNTR Then $iLayoutmode = _GUICtrlComboBox_GetCurSel(GUICtrlGetHandle($hLayoutCombo))
+				
+				; Add IP to recent list and save
+				AddRecentIP($sIpAddr)
+				WriteConfig()
+				WriteEnhancedConfig()
+				
+				; Update main GUI if it exists
+				If WinExists($sGUITitle) Then
+					UpdateMainGUIFromSettings()
+				EndIf
+				
+				ExitLoop
+			Case $hResetBtn
+				Local $iResult = MsgBox($MB_YESNO + $MB_ICONQUESTION, "Reset Settings", "This will reset all settings to defaults. Are you sure?")
+				If $iResult = $IDYES Then
+					ResetToDefaults()
+					GUIDelete($hSettings)
+					ShowSettingsDialog()
+					Return
+				EndIf
+			Case $hTestBtn
+				TestConnection(GUICtrlRead($hIPCombo))
+			Case $hExportBtn
+				ExportSettings()
+			Case $hImportBtn
+				ImportSettings()
+		EndSwitch
+	WEnd
+	
+	GUIDelete($hSettings)
+EndFunc
+
+Func GetCurrentQualityPreset()
+	; Determine which quality preset matches current settings
+	For $i = 0 To UBound($aQualityPresets) - 1
+		If $iPriorityMode = $aQualityPresets[$i][1] And _
+		   $iPriorityFactor = $aQualityPresets[$i][2] And _
+		   $iImageQuality = $aQualityPresets[$i][3] And _
+		   $iQoS = $aQualityPresets[$i][4] Then
+			Return $i
+		EndIf
+	Next
+	Return -1 ; Custom settings
+EndFunc
+
+Func UpdateMainGUIFromSettings()
+	; Update main GUI controls with current settings
+	If $SnickerstreamGUI <> 0 Then
+		_GUICtrlIpAddress_Set($GUI_IpAddr, $sIpAddr)
+		GUICtrlSetData($GUI_PriorityFactor, $iPriorityFactor)
+		GUICtrlSetData($GUI_ImageQuality, $iImageQuality)
+		GUICtrlSetData($GUI_QoS, $iQoS)
+		_GUICtrlComboBox_SetCurSel($GUI_Interpolation, $iInterpolation)
+		_GUICtrlComboBox_SetCurSel($GUI_Layoutmode, $iLayoutmode)
+		_GUICtrlComboBox_SetCurSel($GUI_Streaming, $bUseNTR ? 0 : 1)
+	EndIf
+EndFunc
+
+Func ResetToDefaults()
+	; Reset all settings to default values
+	$sIpAddr = "192.168.1.100"
+	$iPriorityMode = 0
+	$iPriorityFactor = 5
+	$iImageQuality = 70
+	$iQoS = 20
+	$iInterpolation = 0
+	$iLayoutmode = 0
+	$bUseNTR = True
+	$bAutoConnect = False
+	
+	; Clear recent IPs
+	For $i = 0 To UBound($aRecentIPs) - 1
+		$aRecentIPs[$i] = ""
+	Next
+	$aRecentIPs[0] = $sIpAddr
+EndFunc
+
+Func TestConnection($sTestIP)
+	; Simple connection test
+	Local $hSocket = TCPConnect($sTestIP, 8000)
+	If $hSocket <> -1 Then
+		TCPCloseSocket($hSocket)
+		MsgBox($MB_ICONINFORMATION, "Connection Test", "Successfully connected to " & $sTestIP & ":8000")
+	Else
+		MsgBox($MB_ICONERROR, "Connection Test", "Could not connect to " & $sTestIP & ":8000" & @CRLF & @CRLF & _
+			"Make sure your 3DS is on and running NTR CFW or HzMod.")
+	EndIf
+EndFunc
+
+Func ExportSettings()
+	; Export settings to JSON file
+	Local $sFile = FileSaveDialog("Export Settings", @MyDocumentsDir, "JSON Files (*.json)", 0, "snickerstream-settings.json")
+	If $sFile <> "" Then
+		Local $hFile = FileOpen($sFile, 2)
+		If $hFile <> -1 Then
+			Local $sJSON = '{'
+			$sJSON &= '"version": "1.10",'
+			$sJSON &= '"method": "' & ($bUseNTR ? 'NTR' : 'HzMod') & '",'
+			$sJSON &= '"ip": "' & $sIpAddr & '",'
+			$sJSON &= '"priorityFactor": ' & $iPriorityFactor & ','
+			$sJSON &= '"imageQuality": ' & $iImageQuality & ','
+			$sJSON &= '"qos": ' & $iQoS & ','
+			$sJSON &= '"interpolation": ' & $iInterpolation & ','
+			$sJSON &= '"layout": ' & $iLayoutmode & ','
+			$sJSON &= '"autoConnect": ' & ($bAutoConnect ? 'true' : 'false')
+			$sJSON &= '}'
+			
+			FileWrite($hFile, $sJSON)
+			FileClose($hFile)
+			MsgBox($MB_ICONINFORMATION, "Export", "Settings exported successfully to " & $sFile)
+		EndIf
+	EndIf
+EndFunc
+
+Func ImportSettings()
+	; Import settings from JSON file
+	Local $sFile = FileOpenDialog("Import Settings", @MyDocumentsDir, "JSON Files (*.json)", 1)
+	If $sFile <> "" And FileExists($sFile) Then
+		Local $sJSON = FileRead($sFile)
+		If $sJSON <> "" Then
+			; Simple JSON parsing for our settings
+			Local $sMethod = StringRegExpReplace($sJSON, '.*"method":\s*"([^"]+)".*', '$1')
+			If $sMethod <> $sJSON Then $bUseNTR = ($sMethod = "NTR")
+			
+			Local $sIP = StringRegExpReplace($sJSON, '.*"ip":\s*"([^"]+)".*', '$1')
+			If $sIP <> $sJSON Then $sIpAddr = $sIP
+			
+			Local $sPriorityFactor = StringRegExpReplace($sJSON, '.*"priorityFactor":\s*(\d+).*', '$1')
+			If $sPriorityFactor <> $sJSON Then $iPriorityFactor = Int($sPriorityFactor)
+			
+			Local $sImageQuality = StringRegExpReplace($sJSON, '.*"imageQuality":\s*(\d+).*', '$1')
+			If $sImageQuality <> $sJSON Then $iImageQuality = Int($sImageQuality)
+			
+			Local $sQoS = StringRegExpReplace($sJSON, '.*"qos":\s*(\d+).*', '$1')
+			If $sQoS <> $sJSON Then $iQoS = Int($sQoS)
+			
+			Local $sInterp = StringRegExpReplace($sJSON, '.*"interpolation":\s*(\d+).*', '$1')
+			If $sInterp <> $sJSON Then $iInterpolation = Int($sInterp)
+			
+			Local $sLayout = StringRegExpReplace($sJSON, '.*"layout":\s*(\d+).*', '$1')
+			If $sLayout <> $sJSON Then $iLayoutmode = Int($sLayout)
+			
+			If StringInStr($sJSON, '"autoConnect": true') Then $bAutoConnect = True
+			
+			AddRecentIP($sIpAddr)
+			WriteConfig()
+			WriteEnhancedConfig()
+			
+			MsgBox($MB_ICONINFORMATION, "Import", "Settings imported successfully from " & $sFile)
+		EndIf
+	EndIf
+EndFunc
+
 Func CreateMainGUIandSettings()
 	;Check if the config file exists. If not, create one with the default config in it.
 	If FileExists($sFname) Then
@@ -742,7 +1257,7 @@ Func CreateMainGUIandSettings()
 	If $bUseNTR == False Then _GUICtrlComboBox_SetCurSel($GUI_Streaming, 1)
 	GUICtrlSetOnEvent(-1, "GUI_StreamingAppChange")
 	Local $Label9 = GUICtrlCreateLabel("Preset", 25, 162, 34, 17, $SS_CENTERIMAGE)
-	Global $GUI_AdvButton = GUICtrlCreateButton("Advanced", 304, 128, 73, 25)
+	Global $GUI_SettingsButton = GUICtrlCreateButton("Settings", 304, 128, 73, 25)
 	GUISetState(@SW_SHOW)
 	#EndRegion ### END Koda GUI section ###
 
@@ -767,7 +1282,7 @@ Func CreateMainGUIandSettings()
 	GUICtrlSetOnEvent($GUI_AboutBtn, "AboutScreen")
 	GUICtrlSetOnEvent($GUI_NFCBtn, "SendNFC")
 	GUICtrlSetOnEvent($GUI_ConnectBtn, "StartStream")
-	GUICtrlSetOnEvent($GUI_AdvButton, "AdvMenu")
+	GUICtrlSetOnEvent($GUI_SettingsButton, "GUI_ShowSettings")
 
 	If $bUseNTR == False Then SettingsStateSet($GUI_DISABLE)
 EndFunc   ;==>CreateMainGUIandSettings
@@ -849,7 +1364,7 @@ Func ButtonStateSet($GUIState)
 	GUICtrlSetState($GUI_AboutBtn, $GUIState)
 	GUICtrlSetState($GUI_NFCBtn, $GUIState)
 	GUICtrlSetState($GUI_ConnectBtn, $GUIState)
-	GUICtrlSetState($GUI_AdvButton, $GUIState)
+	GUICtrlSetState($GUI_SettingsButton, $GUIState)
 EndFunc   ;==>ButtonStateSet
 
 Func ExitMain()
@@ -1033,6 +1548,10 @@ EndFunc
 Func GUI_PresetChange()
 	PresetSwitch(_GUICtrlComboBox_GetCurSel($GUI_Preset)) ;I need this one line function due to AutoIt's OnEvent mode
 EndFunc   ;==>GUI_PresetChange
+
+Func GUI_ShowSettings()
+	ShowSettingsDialog()
+EndFunc   ;==>GUI_ShowSettings
 
 Func PresetSwitch($iPresetNum)
 	Switch $iPresetNum
