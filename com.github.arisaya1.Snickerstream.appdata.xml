@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>com.github.arisaya1.Snickerstream</id>
+  <metadata_license>GPL-3.0-or-later</metadata_license>
+  <project_license>GPL-3.0-or-later</project_license>
+  <name>Snickerstream</name>
+  <summary>Nintendo 3DS Streaming Client</summary>
+  <description>
+    <p>
+      Snickerstream is a powerful streaming client for Nintendo 3DS consoles that supports both NTR and HzMod streaming methods. 
+      It offers real-time screen scaling, multiple interpolation modes, various screen layouts, and many customizable features 
+      for an optimal 3DS streaming experience.
+    </p>
+    <p>Features include:</p>
+    <ul>
+      <li>Support for both NTR CFW and HzMod streaming</li>
+      <li>Real-time screen scaling and interpolation</li>
+      <li>Multiple screen layouts including fullscreen modes</li>
+      <li>Built-in screenshot functionality</li>
+      <li>Automatic remoteplay initialization</li>
+      <li>Customizable hotkeys</li>
+      <li>Multiple console streaming support</li>
+    </ul>
+  </description>
+  <categories>
+    <category>Game</category>
+    <category>Network</category>
+  </categories>
+  <keywords>
+    <keyword>nintendo</keyword>
+    <keyword>3ds</keyword>
+    <keyword>streaming</keyword>
+    <keyword>ntr</keyword>
+    <keyword>hzmod</keyword>
+  </keywords>
+  <url type="homepage">https://github.com/RattletraPM/Snickerstream</url>
+  <url type="bugtracker">https://github.com/RattletraPM/Snickerstream/issues</url>
+  <url type="help">https://github.com/RattletraPM/Snickerstream/wiki</url>
+  <developer_name>RattletraPM</developer_name>
+  <launchable type="desktop-id">com.github.arisaya1.Snickerstream.desktop</launchable>
+  <provides>
+    <binary>snickerstream</binary>
+  </provides>
+  <screenshots>
+    <screenshot type="default">
+      <caption>Main Snickerstream interface</caption>
+    </screenshot>
+  </screenshots>
+  <releases>
+    <release version="1.10+" date="2024-01-01">
+      <description>
+        <p>Flatpak release with Linux compatibility via Wine</p>
+      </description>
+    </release>
+  </releases>
+  <content_rating type="oars-1.1" />
+</component>
