@@ -1190,6 +1190,71 @@ Func ImportSettings()
 	EndIf
 EndFunc
 
+Func UpdateQualityPresetIndicator()
+	; Add a small quality indicator label
+	Local $iCurrentPreset = GetCurrentQualityPreset()
+	Local $sPresetText = "Custom"
+	If $iCurrentPreset >= 0 And $iCurrentPreset < UBound($aQualityPresets) Then
+		$sPresetText = $aQualityPresets[$iCurrentPreset][0]
+	EndIf
+	
+	; Create a small label near the quality setting
+	Local $hQualityIndicator = GUICtrlCreateLabel("Quality: " & $sPresetText, 24, 155, 200, 15, $SS_LEFT)
+	GUICtrlSetFont($hQualityIndicator, 7)
+	GUICtrlSetColor($hQualityIndicator, 0x666666)
+	GUICtrlSetTip($hQualityIndicator, "Current quality preset. Click Settings to change.")
+EndFunc
+
+Func CreateIPContextMenu()
+	; Create context menu for IP field to select recent IPs
+	Local $hIPContextMenu = GUICtrlCreateContextMenu($GUI_IpAddr)
+	
+	; Add recent IPs to context menu
+	Local $iMenuItems = 0
+	For $i = 0 To UBound($aRecentIPs) - 1
+		If $aRecentIPs[$i] <> "" Then
+			Local $hMenuItem = GUICtrlCreateMenuItem($aRecentIPs[$i], $hIPContextMenu)
+			GUICtrlSetOnEvent($hMenuItem, "GUI_SelectRecentIP")
+			$iMenuItems += 1
+		EndIf
+	Next
+	
+	If $iMenuItems > 0 Then
+		GUICtrlCreateMenuItem("", $hIPContextMenu) ; Separator
+	EndIf
+	
+	; Add settings option
+	Local $hSettingsMenuItem = GUICtrlCreateMenuItem("Open Settings...", $hIPContextMenu)
+	GUICtrlSetOnEvent($hSettingsMenuItem, "GUI_ShowSettings")
+EndFunc
+
+Func GUI_SelectRecentIP()
+	; Handle recent IP selection from context menu
+	Local $sSelectedIP = GUICtrlRead(@GUI_CtrlId)
+	If $sSelectedIP <> "" Then
+		_GUICtrlIpAddress_Set($GUI_IpAddr, $sSelectedIP)
+		$sIpAddr = $sSelectedIP
+	EndIf
+EndFunc
+
+Func UpdateIPTooltip()
+	; Create tooltip showing recent IPs for easy reference
+	Local $sTooltip = "Recent IPs:" & @CRLF
+	Local $iCount = 0
+	For $i = 0 To UBound($aRecentIPs) - 1
+		If $aRecentIPs[$i] <> "" And $iCount < 3 Then
+			$sTooltip &= "• " & $aRecentIPs[$i] & @CRLF
+			$iCount += 1
+		EndIf
+	Next
+	If $iCount = 0 Then
+		$sTooltip = "Click Settings to configure recent IPs"
+	Else
+		$sTooltip &= "Right-click IP field to select from recent IPs"
+	EndIf
+	GUICtrlSetTip($GUI_IpAddr, $sTooltip)
+EndFunc
+
 Func CreateMainGUIandSettings()
 	;Check if the config file exists. If not, create one with the default config in it.
 	If FileExists($sFname) Then
@@ -1278,6 +1343,15 @@ Func CreateMainGUIandSettings()
 	_GUICtrlComboBox_SetCurSel($GUI_Interpolation, $iInterpolation)
 	_GUICtrlComboBox_SetCurSel($GUI_Layoutmode, $iLayoutmode)
 
+	; Add tooltip showing recent IPs for easy reference
+	UpdateIPTooltip()
+
+	; Add context menu for IP field for quick recent IP selection
+	CreateIPContextMenu()
+
+	; Add quality preset indicator
+	UpdateQualityPresetIndicator()
+
 	GUISetOnEvent($GUI_EVENT_CLOSE, "ExitMain", $SnickerstreamGUI)
 	GUICtrlSetOnEvent($GUI_AboutBtn, "AboutScreen")
 	GUICtrlSetOnEvent($GUI_NFCBtn, "SendNFC")
@@ -1353,7 +1427,9 @@ EndFunc   ;==>SendNFC
 
 Func StartStream()
 	UpdateVars()
+	AddRecentIP($sIpAddr) ; Track this IP in recent list
 	WriteConfig()
+	WriteEnhancedConfig()
 	If $AdvancedMenu <> 0 Then ExitAdvanced()
 	GUIDelete($SnickerstreamGUI)
 	$bStreaming = True
