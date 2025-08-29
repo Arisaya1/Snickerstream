@@ -1,0 +1,30 @@
+# Build artifacts
+build-dir/
+.flatpak-builder/
+*.flatpak
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.venv/
+.env
+
+# Temporary files
+*.tmp
+*.temp
+.DS_Store
+Thumbs.db
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Generated files
+res/snickerstream-*.png

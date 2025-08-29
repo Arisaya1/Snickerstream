@@ -4,6 +4,24 @@ Snickerstream is a streaming client for Nintendo 3DS consoles. It's the first an
 
 (NOTE: As of version 1.10 HzMod support is still experimental and partially incomplete and only its latest version is supported. However game compatibility is almost flawless, only very few titles cannot be streamed using Snickerstream but can be using HorizonScreen. All of this will be gradually fixed with each newer version!)
 
+## 🐧 NEW: Linux/Bazzite Support!
+
+Snickerstream is now available for Linux distributions including Bazzite! Get the modern, cross-platform version with:
+
+**🚀 One-Click Install for Bazzite:**
+```bash
+curl -fsSL https://raw.githubusercontent.com/Arisaya1/Snickerstream/master/install-bazzite.sh | bash
+```
+
+**Features:**
+- ✅ Native Linux support via Flatpak
+- ✅ Modern Python-based UI optimized for Linux
+- ✅ All original features: NTR & HzMod support, real-time scaling, multiple layouts
+- ✅ Easy installation and updates
+- ✅ Sandboxed and secure
+
+📖 **[Complete Bazzite Installation Guide](BAZZITE_INSTALL.md)**
+
 Snickerstream's three main focuses are performance, customizability and feature-richness. If all you want to do is to set up a simple 3DS streaming environment then your usual NTR & HzMod settings are all there, or if you don't want to touch them at all you can even choose one of the built-in presets. However, if you're someone who wants to tweak every single variable and setting to get everything up and running just the way you want it to be, you'll definitely feel just at home in the advanced menu... or in the settings INI, if that's more your thing.
 
 Don't believe me? Here are some examples of features you can expect:

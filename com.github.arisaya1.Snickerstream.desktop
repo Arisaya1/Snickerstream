@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=Snickerstream
+GenericName=Nintendo 3DS Streaming Client
+Comment=Stream Nintendo 3DS screens to your PC with NTR and HzMod support
+Categories=Game;Network;
+Icon=com.github.arisaya1.Snickerstream
+Exec=snickerstream
+Terminal=false
+StartupNotify=true
+Keywords=nintendo;3ds;streaming;ntr;hzmod;

@@ -1,0 +1,45 @@
+#!/bin/bash
+
+# Snickerstream Flatpak Launcher
+# Sets up Wine environment and launches Snickerstream
+
+set -e
+
+# Set up directories
+WINEPREFIX="${XDG_DATA_HOME:-$HOME/.var/app/com.github.arisaya1.Snickerstream/data}/wine"
+SNICKERSTREAM_DIR="/app/share/snickerstream"
+
+# Create wine prefix if it doesn't exist
+if [ ! -d "$WINEPREFIX" ]; then
+    echo "Setting up Wine environment for Snickerstream..."
+    mkdir -p "$WINEPREFIX"
+    
+    # Initialize wine prefix
+    WINEPREFIX="$WINEPREFIX" wine wineboot --init
+    
+    # Install required Windows components
+    WINEPREFIX="$WINEPREFIX" winetricks -q corefonts vcrun2019
+fi
+
+# Set wine environment
+export WINEPREFIX
+export WINEDLLOVERRIDES="mscoree=d"
+
+# Navigate to Snickerstream directory
+cd "$SNICKERSTREAM_DIR"
+
+# Check if AutoIt is available, if not provide fallback
+if command -v autoit3 &> /dev/null; then
+    echo "Running Snickerstream with AutoIt..."
+    autoit3 Snickerstream.au3
+else
+    echo "AutoIt not found, attempting to run with Wine..."
+    # Try to run with wine if AutoIt binary is available
+    if [ -f "Snickerstream.exe" ]; then
+        wine Snickerstream.exe
+    else
+        echo "Error: Neither AutoIt nor compiled Snickerstream.exe found"
+        echo "Please ensure the application is properly packaged"
+        exit 1
+    fi
+fi
