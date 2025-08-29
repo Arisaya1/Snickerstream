@@ -1,0 +1,37 @@
+#!/bin/bash
+
+# Snickerstream Wine Wrapper for Flatpak
+# Sets up Wine environment and launches Snickerstream
+
+set -e
+
+# Wine prefix location inside Flatpak sandbox
+export WINEPREFIX="$XDG_DATA_HOME/wine"
+export WINEDLLOVERRIDES="mscoree=d"
+
+# Ensure wine prefix exists
+if [ ! -d "$WINEPREFIX" ]; then
+    echo "Setting up Wine environment for Snickerstream..."
+    mkdir -p "$WINEPREFIX"
+    
+    # Initialize wine prefix (win32 for compatibility)
+    export WINEARCH=win32
+    wine wineboot --init
+    
+    # Install basic Windows components needed for AutoIt
+    winetricks -q corefonts vcrun2019 || echo "Warning: Some Windows components could not be installed"
+fi
+
+# Navigate to Snickerstream directory
+cd /app/opt/snickerstream
+
+# Launch Snickerstream
+if [ -f "Snickerstream.exe" ]; then
+    echo "Launching Snickerstream..."
+    wine Snickerstream.exe "$@"
+else
+    echo "Error: Snickerstream.exe not found in /app/opt/snickerstream"
+    echo "Available files:"
+    ls -la /app/opt/snickerstream/
+    exit 1
+fi

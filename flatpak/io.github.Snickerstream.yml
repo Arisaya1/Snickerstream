@@ -1,0 +1,39 @@
+app-id: io.github.Snickerstream
+runtime: org.winehq.Platform
+runtime-version: '9'
+sdk: org.winehq.Sdk
+command: snickerstream
+
+finish-args:
+  - --share=network
+  - --share=ipc
+  - --socket=x11
+  - --socket=wayland
+  - --socket=pulseaudio
+  - --device=dri
+  - --filesystem=xdg-download:ro
+  - --filesystem=home:ro
+  - --persist=.wine
+
+modules:
+  - name: snickerstream
+    buildsystem: simple
+    build-commands:
+      # Download latest Windows release
+      - mkdir -p /app/opt/snickerstream
+      - wget -O snickerstream-windows.zip "https://github.com/RattletraPM/Snickerstream/releases/latest/download/Snickerstream.zip" || wget -O snickerstream-windows.zip "https://github.com/RattletraPM/Snickerstream/archive/refs/heads/master.zip"
+      - unzip -q snickerstream-windows.zip -d temp || true
+      # Handle different archive structures
+      - if [ -f temp/Snickerstream.exe ]; then cp temp/* /app/opt/snickerstream/ 2>/dev/null || true; fi
+      - if [ -f temp/Snickerstream-master/Snickerstream.exe ]; then cp temp/Snickerstream-master/* /app/opt/snickerstream/ 2>/dev/null || true; fi
+      # If no exe found, copy current source and compile info
+      - if [ ! -f /app/opt/snickerstream/Snickerstream.exe ]; then cp Snickerstream.au3 /app/opt/snickerstream/; cp -r include /app/opt/snickerstream/; cp -r res /app/opt/snickerstream/; fi
+      # Install wrapper script
+      - install -Dm755 flatpak/snickerstream-wrapper /app/bin/snickerstream
+      # Install desktop file and metadata
+      - install -Dm644 flatpak/io.github.Snickerstream.desktop /app/share/applications/io.github.Snickerstream.desktop
+      - install -Dm644 flatpak/io.github.Snickerstream.metainfo.xml /app/share/metainfo/io.github.Snickerstream.metainfo.xml
+      - install -Dm644 flatpak/icons/io.github.Snickerstream.png /app/share/icons/hicolor/256x256/apps/io.github.Snickerstream.png
+    sources:
+      - type: dir
+        path: .

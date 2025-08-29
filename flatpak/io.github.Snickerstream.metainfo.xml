@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>io.github.Snickerstream</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-3.0</project_license>
+  <name>Snickerstream</name>
+  <summary>Nintendo 3DS streaming client for NTR CFW and HzMod</summary>
+  
+  <description>
+    <p>
+      Snickerstream is a feature-rich streaming client for Nintendo 3DS consoles. 
+      It supports both NTR CFW and HzMod streaming protocols, allowing you to 
+      stream your 3DS screens to your computer with high quality and low latency.
+    </p>
+    <p>Features include:</p>
+    <ul>
+      <li>Support for both NTR CFW and HzMod streaming</li>
+      <li>Real-time screen scaling and multiple interpolation modes</li>
+      <li>Various screen layouts including fullscreen and separate windows</li>
+      <li>Built-in screenshot functionality</li>
+      <li>Customizable quality settings and hotkeys</li>
+      <li>Multiple 3DS console support</li>
+      <li>Low resource usage and high performance</li>
+    </ul>
+  </description>
+  
+  <launchable type="desktop-id">io.github.Snickerstream.desktop</launchable>
+  
+  <url type="homepage">https://github.com/RattletraPM/Snickerstream</url>
+  <url type="bugtracker">https://github.com/RattletraPM/Snickerstream/issues</url>
+  <url type="help">https://github.com/RattletraPM/Snickerstream/wiki</url>
+  
+  <developer_name>RattletraPM</developer_name>
+  
+  <categories>
+    <category>Game</category>
+    <category>Network</category>
+  </categories>
+  
+  <keywords>
+    <keyword>nintendo</keyword>
+    <keyword>3ds</keyword>
+    <keyword>streaming</keyword>
+    <keyword>ntr</keyword>
+    <keyword>hzmod</keyword>
+  </keywords>
+  
+  <content_rating type="oars-1.1" />
+  
+  <releases>
+    <release version="1.10" date="2023-12-01">
+      <description>
+        <p>Latest stable release with HzMod support and performance improvements.</p>
+      </description>
+    </release>
+  </releases>
+</component>

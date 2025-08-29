@@ -6,21 +6,39 @@ Snickerstream is a streaming client for Nintendo 3DS consoles. It's the first an
 
 ## 🐧 NEW: Linux/Bazzite Support!
 
-Snickerstream is now available for Linux distributions including Bazzite! Get the modern, cross-platform version with:
+Snickerstream is now available for Linux distributions including Bazzite! Choose your preferred installation method:
 
-**🚀 One-Click Install for Bazzite:**
+### 📦 Flatpak (Recommended for Bazzite/Fedora Atomic)
+
+**Wine-based Flatpak - Runs the original Windows version:**
+```bash
+# Install Wine runtime
+flatpak install org.winehq.Platform//9 org.winehq.Platform.Compat.i386//9
+
+# Install Snickerstream (download .flatpak from releases)
+flatpak install --user Snickerstream.flatpak
+
+# Run
+flatpak run io.github.Snickerstream
+```
+
+📖 **[Complete Flatpak Installation Guide](docs/FLATPAK.md)**
+
+### 🐍 Python Version
+
+**Modern Python-based version with native Linux UI:**
 ```bash
 curl -fsSL https://raw.githubusercontent.com/Arisaya1/Snickerstream/master/install-bazzite.sh | bash
 ```
 
+📖 **[Complete Bazzite Installation Guide](BAZZITE_INSTALL.md)**
+
 **Features:**
-- ✅ Native Linux support via Flatpak
-- ✅ Modern Python-based UI optimized for Linux
+- ✅ Perfect for immutable systems (no system package installs)
+- ✅ Both original Windows version (Flatpak) and Python version available
 - ✅ All original features: NTR & HzMod support, real-time scaling, multiple layouts
 - ✅ Easy installation and updates
 - ✅ Sandboxed and secure
-
-📖 **[Complete Bazzite Installation Guide](BAZZITE_INSTALL.md)**
 
 Snickerstream's three main focuses are performance, customizability and feature-richness. If all you want to do is to set up a simple 3DS streaming environment then your usual NTR & HzMod settings are all there, or if you don't want to touch them at all you can even choose one of the built-in presets. However, if you're someone who wants to tweak every single variable and setting to get everything up and running just the way you want it to be, you'll definitely feel just at home in the advanced menu... or in the settings INI, if that's more your thing.
 
