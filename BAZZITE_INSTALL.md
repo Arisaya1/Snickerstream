@@ -11,14 +11,21 @@ Snickerstream is now available as a modern Flatpak application optimized for Baz
 
 ## 🚀 One-Click Installation
 
-### Quick Install (Recommended)
+### Quick Install with GUI Wizard (Recommended)
 
 ```bash
-# Download and run the installer
+# Download and run the graphical installer wizard
+curl -fsSL https://raw.githubusercontent.com/Arisaya1/Snickerstream/master/install-wizard.sh | bash
+```
+
+### Alternative: Classic One-Click Install
+
+```bash
+# Download and run the basic installer
 curl -fsSL https://raw.githubusercontent.com/Arisaya1/Snickerstream/master/install-bazzite.sh | bash
 ```
 
-### Manual Installation
+### Manual Installation with GUI Wizard
 
 1. **Clone the repository:**
    ```bash
@@ -26,14 +33,26 @@ curl -fsSL https://raw.githubusercontent.com/Arisaya1/Snickerstream/master/insta
    cd Snickerstream
    ```
 
-2. **Run the installer:**
+2. **Run the installation wizard:**
    ```bash
-   ./install-bazzite.sh
+   ./install.sh
+   # or directly:
+   ./install-wizard.sh
    ```
 
 3. **Launch Snickerstream:**
    - Find it in your application menu under "Games"
    - Or run: `flatpak run com.github.arisaya1.Snickerstream`
+
+### 🎭 Installation Wizard Features
+
+The new installation wizard provides:
+- **🖥️ Nice Terminal GUI**: Beautiful interface with dialog boxes and progress bars
+- **🚀 First-run Wizard**: Step-by-step guidance for beginners
+- **🔍 System Requirements Check**: Automatic validation of dependencies
+- **📊 Progress Tracking**: Visual progress indicators during installation
+- **🎯 Post-Installation Help**: Quick setup guide for your Nintendo 3DS
+- **🔄 Smart Fallback**: Automatically uses simple mode if GUI isn't available
 
 ## 🎮 Features
 

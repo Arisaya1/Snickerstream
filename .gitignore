@@ -19,6 +19,7 @@ venv/
 *.temp
 .DS_Store
 Thumbs.db
+demo-wizard.sh
 
 # IDE files
 .vscode/
