@@ -33,9 +33,9 @@
     <keyword>ntr</keyword>
     <keyword>hzmod</keyword>
   </keywords>
-  <url type="homepage">https://github.com/RattletraPM/Snickerstream</url>
-  <url type="bugtracker">https://github.com/RattletraPM/Snickerstream/issues</url>
-  <url type="help">https://github.com/RattletraPM/Snickerstream/wiki</url>
+  <url type="homepage">https://github.com/Arisaya1/Snickerstream</url>
+  <url type="bugtracker">https://github.com/Arisaya1/Snickerstream/issues</url>
+  <url type="help">https://github.com/Arisaya1/Snickerstream/wiki</url>
   <developer_name>RattletraPM</developer_name>
   <launchable type="desktop-id">com.github.arisaya1.Snickerstream.desktop</launchable>
   <provides>

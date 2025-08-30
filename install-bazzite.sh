@@ -83,7 +83,7 @@ echo "  ✓ Configurable hotkeys"
 echo "  ✓ Screenshot functionality"
 echo ""
 echo "For help and troubleshooting, visit:"
-echo "https://github.com/RattletraPM/Snickerstream/wiki"
+echo "https://github.com/Arisaya1/Snickerstream/wiki"
 echo ""
 
 # Clean up
