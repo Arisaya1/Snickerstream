@@ -162,8 +162,8 @@ flatpak uninstall com.github.arisaya1.Snickerstream
 
 ## 🆘 Getting Help
 
-- **Documentation**: [GitHub Wiki](https://github.com/RattletraPM/Snickerstream/wiki)
-- **Issues**: [GitHub Issues](https://github.com/RattletraPM/Snickerstream/issues)
+- **Documentation**: [GitHub Wiki](https://github.com/Arisaya1/Snickerstream/wiki)
+- **Issues**: [GitHub Issues](https://github.com/Arisaya1/Snickerstream/issues)
 - **Community**: Join gaming communities on Discord for 3DS streaming help
 
 ## 📝 License

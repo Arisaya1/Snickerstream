@@ -6,13 +6,23 @@ Cross-platform Python implementation for Linux/Flatpak compatibility
 Based on the original AutoIt version by RattletraPM
 """
 
-import tkinter as tk
-from tkinter import ttk, messagebox, filedialog
 import socket
 import threading
 import json
 import os
 import sys
+
+# Check for tkinter availability
+try:
+    import tkinter as tk
+    from tkinter import ttk, messagebox, filedialog
+    TKINTER_AVAILABLE = True
+except ImportError:
+    TKINTER_AVAILABLE = False
+    print("Error: tkinter not available. This is required for the GUI.")
+    sys.exit(1)
+
+# Check for Pillow availability
 try:
     from PIL import Image, ImageTk
     PILLOW_AVAILABLE = True
@@ -206,6 +216,8 @@ class SnickerStreamGUI:
         except Exception as e:
             messagebox.showerror("Connection Error", f"Failed to start streaming: {str(e)}")
             self.streaming = False
+            self.connect_btn.config(text="Connect")
+            self.status_var.set("Connection failed")
     
     def stop_streaming(self):
         self.streaming = False
@@ -245,13 +257,21 @@ class SnickerStreamGUI:
         pass
     
     def update_config(self):
-        self.config["ip"] = self.ip_var.get()
-        self.config["port"] = int(self.port_var.get())
-        self.config["streaming_app"] = self.app_var.get()
-        self.config["quality"] = self.quality_var.get()
-        self.config["layout"] = self.layout_var.get()
-        self.config["interpolation"] = self.interp_var.get()
-        self.config["auto_connect"] = self.auto_connect_var.get()
+        try:
+            self.config["ip"] = self.ip_var.get().strip()
+            port_str = self.port_var.get().strip()
+            if not port_str.isdigit() or not (1 <= int(port_str) <= 65535):
+                raise ValueError("Port must be a number between 1 and 65535")
+            self.config["port"] = int(port_str)
+            self.config["streaming_app"] = self.app_var.get()
+            self.config["quality"] = self.quality_var.get()
+            self.config["layout"] = self.layout_var.get()
+            self.config["interpolation"] = self.interp_var.get()
+            self.config["auto_connect"] = self.auto_connect_var.get()
+        except ValueError as e:
+            raise ValueError(f"Invalid configuration: {str(e)}")
+        except Exception as e:
+            raise Exception(f"Configuration error: {str(e)}")
     
     def save_config(self):
         self.update_config()
@@ -311,38 +331,46 @@ class SnickerStreamGUI:
 
 
 def main():
-    # Set up tkinter with better theming
-    root = tk.Tk()
-    
-    # Try to use modern theme if available
     try:
-        root.tk.call('source', '/usr/share/tcltk/tk8.6/ttk/altTheme.tcl')
-        style = ttk.Style()
-        style.theme_use('alt')
-    except:
-        pass
-    
-    # Create and run the application
-    app = SnickerStreamGUI(root)
-    
-    # Auto-connect if enabled
-    if app.config.get("auto_connect", False):
-        root.after(1000, app.start_streaming)
-    
-    # Set up proper close handling
-    def on_closing():
-        if app.streaming:
-            app.stop_streaming()
-        root.destroy()
-    
-    root.protocol("WM_DELETE_WINDOW", on_closing)
-    
-    # Bind hotkeys
-    root.bind('<Escape>', lambda e: on_closing())
-    root.bind('<KeyPress-s>', lambda e: app.take_screenshot())
-    
-    # Start the GUI
-    root.mainloop()
+        # Set up tkinter with better theming
+        root = tk.Tk()
+        
+        # Try to use modern theme if available
+        try:
+            root.tk.call('source', '/usr/share/tcltk/tk8.6/ttk/altTheme.tcl')
+            style = ttk.Style()
+            style.theme_use('alt')
+        except:
+            pass
+        
+        # Create and run the application
+        app = SnickerStreamGUI(root)
+        
+        # Auto-connect if enabled
+        if app.config.get("auto_connect", False):
+            root.after(1000, app.start_streaming)
+        
+        # Set up proper close handling
+        def on_closing():
+            try:
+                if app.streaming:
+                    app.stop_streaming()
+                root.destroy()
+            except Exception:
+                pass  # Ignore errors during shutdown
+        
+        root.protocol("WM_DELETE_WINDOW", on_closing)
+        
+        # Bind hotkeys
+        root.bind('<Escape>', lambda e: on_closing())
+        root.bind('<KeyPress-s>', lambda e: app.take_screenshot())
+        
+        # Start the GUI
+        root.mainloop()
+        
+    except Exception as e:
+        print(f"Fatal error: {str(e)}")
+        sys.exit(1)
 
 
 if __name__ == "__main__":
