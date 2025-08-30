@@ -8,14 +8,15 @@ Snickerstream is a streaming client for Nintendo 3DS consoles. It's the first an
 
 Snickerstream is now available for Linux distributions including Bazzite! Get the modern, cross-platform version with:
 
-**🚀 One-Click Install for Bazzite:**
+**🚀 One-Click Install for Bazzite (GUI Wizard):**
 ```bash
-curl -fsSL https://raw.githubusercontent.com/Arisaya1/Snickerstream/master/install-bazzite.sh | bash
+curl -fsSL https://raw.githubusercontent.com/Arisaya1/Snickerstream/master/install-wizard.sh | bash
 ```
 
 **Features:**
 - ✅ Native Linux support via Flatpak
 - ✅ Modern Python-based UI optimized for Linux
+- ✅ **NEW: Terminal GUI Installation Wizard** - "dumb easy" setup with beautiful dialogs
 - ✅ All original features: NTR & HzMod support, real-time scaling, multiple layouts
 - ✅ Easy installation and updates
 - ✅ Sandboxed and secure
